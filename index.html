@@ -18,25 +18,37 @@
 
       <div id="form">
         <form id="collisionForm">
-          <label for="E">E</label> = (
-          <input type="number" step="0.001" value="1" id="E_x" class="exponent_input" required> x 
-          10^<input type="number" step="1" value="0" id="E_x_exp" class="exponent_input" required> В/м, <br/>
-          <input type="number" step="0.001" value="1" id="E_y" class="exponent_input" required> x 
-          10^<input type="number" step="1" value="0" id="E_y_exp" class="exponent_input" required> В/м)<br/>
+          <label for="S">S</label> = 
+          <input type="number" step="0.001" value="1" id="S" class="exponent_input" required> x 
+          10^<input type="number" step="1" value="0" id="S_exp" class="exponent_input" required> м<sup>2</sup><br/>
 
-          Плотность стрелок: 1 на <input type="number" value="30" id="arrowdensity" class="exponent_input" required> пикселей<br/>
+          0 м<sup>2</sup> <input type="range" min="0" max="2" value="1" step="0.001" class="slider" id="SRange"> <span id="SRangeDisplay"></span> м<sup>2</sup><br/>
 
-          <input type="checkbox" id="fieldStrength" name="forceType" value="fieldStrength" checked/> <label for="fieldStrength">Показывать вектора напряженности</label> <br/>
-          
-          <input type="checkbox" id="electricDisplacement" name="forceType" value="electricDisplacement" /> <label for="electricDisplacement">Показывать вектора индукции</label> <br/>
+          <label for="d">d</label> = 
+          <input type="number" step="0.001" value="1" id="d" class="exponent_input" required> x 
+          10^<input type="number" step="1" value="0" id="d_exp" class="exponent_input" required> м<br/>
+
+          0 м <input type="range" min="0" max="2" value="1" step="0.001" class="slider" id="dRange"> <span id="dRangeDisplay"></span> м<br/>
+
+          <label for="epsilon">ε</label> = 
+          <input type="number" step="0.001" value="1" id="epsilon" class="exponent_input" required><br/>
+
+          0 <input type="range" min="0" max="2" value="1" step="0.001" class="slider" id="epsilonRange"> <span id="epsilonRangeDisplay"></span><br/>
+
+          <label for="U">U</label> = 
+          <input type="number" step="0.001" value="1" id="U" class="exponent_input" required> В<br/>
+
+          0 В <input type="range" min="0" max="2" value="1" step="0.001" class="slider" id="URange"> <span id="URangeDisplay"></span> В<br/>
+
+          <input type="checkbox" checked id="UConnection"> Подключен к питанию?<br/>
+
+          <p id="chargeValue"></p>
+
+          Плотность стрелок: 1 на <input type="number" value="20" id="arrowdensity" class="exponent_input" required> пикселей<br/>
 
           Не показывать стрелку, если напряженность меньше:
           <input type="number" step="0.001" value="1" id="dontshowbound" class="exponent_input" required> x
           10^<input type="number" step="1" value="-2" id="dontshowboundexp" class="exponent_input" required> В/м <br/>
-
-          Не показывать стрелку, если индукция меньше:
-          <input type="number" step="0.001" value="1" id="dontshowdisplacementbound" class="exponent_input" required> x
-          10^<input type="number" step="1" value="-11" id="dontshowbounddisplacementexp" class="exponent_input" required> Кл/м<sup>2</sup> <br/>
 
           <div id="color_settings">
             <div>
@@ -51,17 +63,6 @@
           
           <button type="submit">Перестроить график</button><br/>
 
-          <div id="chargesForm">
-            1 заряд: <br/> 
-            
-            <label for="x_0">x<sub>0</sub></label> = <input type="number" step="0.001" value="0" id="x_0" class="exponent_input" required> м;
-            <label for="y_0">y<sub>0</sub></label> = <input type="number" step="0.001" value="0" id="y_0" class="exponent_input" required> м <br/>
-                
-            <label for="q_0">q<sub>0</sub></label> = <input type="number" step="0.001" value="1" id="q_0" class="exponent_input" required> x 
-            10^<input type="number" step="1" value="-9" id="q_0_exp" class="exponent_input" required> Кл <br/>
-          </div>
-
-          <button id="addEnvironment" type="button">Добавить среду</button><br/>
 
 
 

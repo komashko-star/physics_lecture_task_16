@@ -1,15 +1,12 @@
-var fieldsPermittivities = [];
-const MAX_X_DOMAIN = 10;
+var MAX_X_DOMAIN = 10;
 var k = 9 * Math.pow(10, 9);
-
-var showFieldStrength = true;
-var showElectricDisplacement = false;
 
 var epsilon_0 = 1 / (k * 4 * Math.PI);
 
 var outerFieldStrength = [1, 1];
 
 var arrowDensity = 30;
+
 
 var color_gradient_start = 0;
 var color_gradient_finish = 40;
@@ -19,6 +16,12 @@ var dontShowDisplacementBound = 0;
 
 var border = null;
 var potentialStep = 1;
+
+var area;
+var distance;
+var voltage;
+var fieldPermittivity;
+var charge;
 
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
@@ -113,16 +116,19 @@ class Border {
     this.id = id;
     this.DOMObject = document.getElementById(this.id);
 
+    this.updateDomain();
+  }
+  getDOMObject() {
+    this.DOMObject = document.getElementById(this.id);
+    return this.DOMObject;
+  }
+  updateDomain() {
     this.x_domain_start = -MAX_X_DOMAIN;
     this.x_domain = MAX_X_DOMAIN;
     this.width = innerSizes(this.DOMObject)[0];
     this.height = innerSizes(this.DOMObject)[1];
     this.y_domain_start = -this.height / this.width * MAX_X_DOMAIN;
     this.y_domain = this.height / this.width * MAX_X_DOMAIN;
-  }
-  getDOMObject(){
-    this.DOMObject = document.getElementById(this.id);
-    return this.DOMObject;
   }
 }
 
@@ -154,19 +160,14 @@ function modelToCanvasCoords(x, y) {
 }
 
 function calculateFieldStrength(x, y) {
-  let index = parseInt(((x + MAX_X_DOMAIN) / (2 * MAX_X_DOMAIN) * fieldsPermittivities.length));
+  if (Math.abs(y) > Math.sqrt(area) / 2) {
+    return [0, 0];
+  }
+  if (Math.abs(x) > distance / 2) {
+    return [0, 0];
+  }
 
-  let result = [outerFieldStrength[0] / fieldsPermittivities[index], outerFieldStrength[1]];
-
-  return result;
-}
-
-function calculateElectricDisplacement(x, y) {
-  let index = parseInt(((x + MAX_X_DOMAIN) / (2 * MAX_X_DOMAIN) * fieldsPermittivities.length));
-
-  let E = calculateFieldStrength(x, y);
-
-  return [E[0] * epsilon_0 * fieldsPermittivities[index], E[1] * epsilon_0 * fieldsPermittivities[index]];
+  return [voltage / distance / fieldPermittivity, 0];
 }
 
 function drawVector(ctx, x, y, E_vector, arrowLength=30, lineWidth=2, color=null) {
@@ -224,72 +225,87 @@ function redraw() {
   let chartContext = chartObject.getContext('2d');
   chartContext.clearRect(0, 0, chartObject.width, chartObject.height);
 
-
   dx = (border.x_domain - border.x_domain_start) / border.width * arrowDensity;
   dy = dx;
-  
-  if (showElectricDisplacement){ 
-    let defaultArrow = calculateElectricDisplacement(-MAX_X_DOMAIN, 0);
-    let defaultArrowLengthMultiplier = 30 / Math.hypot(defaultArrow[0], defaultArrow[1]);
 
-    for (let x = border.x_domain_start + dx / 2; x < border.x_domain; x += dx) {
-      for (let y = border.y_domain_start + dy / 2; y < border.y_domain; y += dy) {      
-        let E_vector = calculateElectricDisplacement(x, y);
-        
-        let E_vector_length = Math.hypot(E_vector[0], E_vector[1]);
-        if (E_vector_length >= dontShowDisplacementBound) {
-          drawVector(chartContext, x, y, E_vector, parseInt(defaultArrowLengthMultiplier * E_vector_length));
-        }
+  let defaultArrow = calculateFieldStrength(0, 0);
+  let defaultArrowLengthMultiplier = 30 / Math.hypot(defaultArrow[0], defaultArrow[1]);
+
+  for (let x = border.x_domain_start; x < border.x_domain; x += dx) {
+    for (let y = border.y_domain_start; y < border.y_domain; y += dy) {      
+      let E_vector = calculateFieldStrength(x, y);
+      
+      let E_vector_length = Math.hypot(E_vector[0], E_vector[1]);
+      if (E_vector_length >= dontShowStrengthBound) {
+        drawVector(chartContext, x, y, E_vector, parseInt(defaultArrowLengthMultiplier * E_vector_length));
       }
     }
   }
 
-  if (showFieldStrength){ 
-    let defaultArrow = calculateFieldStrength(-MAX_X_DOMAIN, 0);
-    let defaultArrowLengthMultiplier = 30 / Math.hypot(defaultArrow[0], defaultArrow[1]);
+  let [x1, y1] = modelToCanvasCoords(distance / 2, Math.sqrt(area) / 2);
+  let [x2, y2] = modelToCanvasCoords(distance / 2, -Math.sqrt(area) / 2);
+  let [x3, y3] = modelToCanvasCoords(-distance / 2, Math.sqrt(area) / 2);
+  let [x4, y4] = modelToCanvasCoords(-distance / 2, -Math.sqrt(area) / 2);
+  chartContext.strokeStyle = '#666';
+  chartContext.lineWidth = 5;
+  chartContext.beginPath(); 
+  chartContext.moveTo(x1, y1);
+  chartContext.lineTo(x2, y2); 
+  chartContext.stroke();
 
-    for (let x = border.x_domain_start; x < border.x_domain; x += dx) {
-      for (let y = border.y_domain_start; y < border.y_domain; y += dy) {      
-        let E_vector = calculateFieldStrength(x, y);
-        
-        let E_vector_length = Math.hypot(E_vector[0], E_vector[1]);
-        if (E_vector_length >= dontShowStrengthBound) {
-          drawVector(chartContext, x, y, E_vector, parseInt(defaultArrowLengthMultiplier * E_vector_length));
-        }
-      }
-    }
-  }
-
-  
+  chartContext.beginPath(); 
+  chartContext.moveTo(x3, y3);
+  chartContext.lineTo(x4, y4);
+  chartContext.stroke();
 }
 
 
 
 function reloadModel() {
-    objects = [];
     border = new Border('border');
+
+
+    if (document.getElementById('UConnection').checked) {
+      charge = fieldPermittivity * epsilon_0 * area / distance * voltage;
+      document.getElementById('chargeValue').innerHTML = 'Заряд конденсатора: ' + to_scientific_notation(charge) + ' Кл<br/>' + 
+        'Напряжение: ' + to_scientific_notation(voltage) + ' В<br/>';
+    } else {
+      voltage = charge / (fieldPermittivity * epsilon_0 * area / distance);
+      document.getElementById('chargeValue').innerHTML = 'Заряд конденсатора: ' + to_scientific_notation(charge) + ' Кл<br/>' + 
+        'Напряжение: ' + to_scientific_notation(voltage) + ' В<br/>';
+    }
 
     redraw();
 }
 
 function collectData() {
-  let outerFieldStrength_ = [
-    parseFloat(document.getElementById('E_x').value) * Math.pow(10, parseFloat(document.getElementById('E_x_exp').value)),
-    parseFloat(document.getElementById('E_y').value) * Math.pow(10, parseFloat(document.getElementById('E_y_exp').value)),
-  ];
-
-  let fieldsPermittivities_ = [];
-
-  for (let i = 1; i <= fieldsPermittivities.length; i++) { 
-    let epsilon = parseFloat(document.getElementById('epsilon_' + i).value);
-    if (epsilon <= 0) {
-      window.alert('Диэлектрическая проницаемость не может быть неположительной');
-      return;
-    }
-      
-    fieldsPermittivities_.push(epsilon);
+  let area_ = parseFloat(document.getElementById('S').value) * Math.pow(10, parseFloat(document.getElementById('S_exp').value));
+  if (area_ <= 0) {
+    window.alert('Площадь обкладок не может быть неположительной');
+    return;
   }
+
+  let distance_ = parseFloat(document.getElementById('d').value) * Math.pow(10, parseFloat(document.getElementById('d_exp').value));
+  if (distance_ <= 0) {
+    window.alert('Расстояние между обкладками не может быть неположительной');
+    return;
+  }
+
+  let epsilon_ = parseFloat(document.getElementById('epsilon').value);
+
+  let voltage_;
+
   
+  voltage_ = parseFloat(document.getElementById('U').value);
+
+  document.getElementById('URange').max = 2 * voltage_;
+  document.getElementById('URangeDisplay').innerText = to_scientific_notation(2 * voltage_);
+  document.getElementById('URange').value = voltage_;
+  document.getElementById('URange').step = voltage_ * 0.001;
+   
+  if (!document.getElementById('UConnection').checked) {
+    voltage_ = voltage;
+  } 
   let arrowDensity_ = parseInt(document.getElementById('arrowdensity').value);
   if (arrowDensity_ <= 0) {
     window.alert('Плотность стрелок не может быть неположительной');
@@ -299,17 +315,11 @@ function collectData() {
   let dontShowBound_ = parseFloat(document.getElementById('dontshowbound').value) * 
     Math.pow(10, parseInt(document.getElementById('dontshowboundexp').value));
 
-  let dontShowDisplacementBound_ = parseFloat(document.getElementById('dontshowdisplacementbound').value) *
-    Math.pow(10, parseInt(document.getElementById('dontshowbounddisplacementexp').value));
-
   color_gradient_finish = parseFloat(document.getElementById('colorsq5value').value);
   color_gradient_finish *= Math.pow(10, parseInt(document.getElementById('colorsq5exp').value));
 
   return [
-    fieldsPermittivities_, arrowDensity_, 
-    dontShowBound_, dontShowDisplacementBound_, outerFieldStrength_,
-    document.getElementById('fieldStrength').checked,
-    document.getElementById('electricDisplacement').checked,
+    area_, distance_, epsilon_, arrowDensity_, dontShowBound_, voltage_
   ];
 }
 
@@ -320,9 +330,8 @@ function reloadForm() {
     return;
   }
   let old_data = [
-    fieldsPermittivities, arrowDensity, 
-    dontShowStrengthBound, dontShowDisplacementBound, outerFieldStrength, 
-    showFieldStrength, showElectricDisplacement];
+    area, distance, fieldPermittivity,
+    arrowDensity, dontShowStrengthBound, voltage];
   let are_equal = old_data.length === data.length && old_data.every(function(value, index) { return value === data[index]});
   if (are_equal){
     document.getElementById('curtain').style.visibility = 'visible';
@@ -330,7 +339,22 @@ function reloadForm() {
     document.getElementById('curtain').style.visibility = 'hidden';
     return;
   }
-  [fieldsPermittivities, arrowDensity, dontShowStrengthBound, dontShowDisplacementBound, outerFieldStrength, showFieldStrength, showElectricDisplacement] = data;
+  [area, distance, fieldPermittivity,
+    arrowDensity, dontShowStrengthBound, voltage] = data;
+  MAX_X_DOMAIN = Math.max(Math.sqrt(area), distance) * 2.05;
+  document.getElementById('dRange').max = 2 * distance;
+  document.getElementById('dRangeDisplay').innerText = to_scientific_notation(2 * distance);
+  document.getElementById('dRange').value = distance;
+  document.getElementById('dRange').step = distance * 0.001;
+  document.getElementById('epsilonRange').max = 2 * fieldPermittivity;
+  document.getElementById('epsilonRangeDisplay').innerText = 2 * fieldPermittivity;
+  document.getElementById('epsilonRange').value = fieldPermittivity;
+  document.getElementById('epsilonRange').step = fieldPermittivity * 0.001;
+  document.getElementById('SRange').max = 4 * area;
+  document.getElementById('SRangeDisplay').innerText = to_scientific_notation(4 * area);
+  document.getElementById('SRange').value = area;
+  document.getElementById('SRange').step = area * 0.001;
+  
 
   document.getElementById('curtain').style.visibility = 'visible';
   reloadModel();
@@ -346,16 +370,8 @@ function showEnergyValue(event) {
   let fieldStrength = calculateFieldStrength(x, y);
   let fieldStrengthLength = Math.hypot(fieldStrength[0], fieldStrength[1]);
 
-  let electricDisplacement = calculateElectricDisplacement(x, y);
-  let electricDisplacementLength = Math.hypot(electricDisplacement[0], electricDisplacement[1]);
-
-  let index = parseInt(((x + MAX_X_DOMAIN) / (2 * MAX_X_DOMAIN) * fieldsPermittivities.length));
-  
   shower.innerHTML = "E = (" + to_scientific_notation(fieldStrength[0]) + ' В/м, ' + to_scientific_notation(fieldStrength[1]) + ' В/м)<br/>' + 
-    '|E| = ' + to_scientific_notation(fieldStrengthLength) + ' В/м<br/>' + 
-    "D = (" + to_scientific_notation(electricDisplacement[0]) + ' Кл/м<sup>2</sup>, ' + to_scientific_notation(electricDisplacement[1]) + ' Кл/м<sup>2</sup>)<br/>' + 
-    '|D| = ' + to_scientific_notation(electricDisplacementLength) + ' Кл/м<sup>2</sup><br/>' + 
-    'ε = ' + to_scientific_notation(fieldsPermittivities[index]) + '';
+    '|E| = ' + to_scientific_notation(fieldStrengthLength) + ' В/м<br/>';
 
   let shower_width = getComputedStyle(shower).width;
   shower_width = +(shower_width.slice(0, shower_width.length - 2));
@@ -383,53 +399,45 @@ function updateColorGradient(event) {
   }
 }
 
-
-function updateChargesForm() {
-  let oneEnvironmentForm = `
-            Среда №$1: <br/> 
-            
-            <label for="epsilon_$1">ε<sub>$1</sub></label> = <input type="number" step="0.001" value="$2" id="epsilon_$1" class="exponent_input" required>;
-            `
+function changeDistance(e) {
+  distance = parseFloat(e.target.value);  
   
-  let removeChargeButton = "<button id=\"removeCharge$1\" type=\"button\">Удалить среду</button><br/>";
+  exponent = digitnumber(distance);
+  number = distance * Math.pow(10, -exponent);
 
-  let chargesForm = document.getElementById('chargesForm');
+  document.getElementById('d').value = number;
+  document.getElementById('d_exp').value = exponent;
 
-  chargesForm.innerHTML = "";
+  reloadModel();
+}
 
-  for (let i = 1; i <= fieldsPermittivities.length; i++) {
-    data = [i, fieldsPermittivities[i - 1]];
+function changeVoltage(e) {
+  let v = parseFloat(e.target.value);
 
-    let t = oneEnvironmentForm;
-    for (let i = 1; i <= data.length; i++) {
-      t = t.replaceAll('$' + i, data[i - 1]);
-    }
-    chargesForm.innerHTML += t + '\n';
+  document.getElementById('U').value = v;
+
+  if (document.getElementById('UConnection').checked){
+    voltage = v;
   
-    if (fieldsPermittivities.length > 1) {
-      chargesForm.innerHTML += removeChargeButton.replaceAll("$1", i);
-    }
-  }
-  if (fieldsPermittivities.length > 1) {
-    for (let i = 1; i <= fieldsPermittivities.length; i++) {
-      document.getElementById('removeCharge' + i).addEventListener('click', removeChargeForm);
-    }
+    reloadModel();
   }
 }
 
-function addEnvironmentForm() {
-  fieldsPermittivities.push(1);
-  updateChargesForm();
+function changePermittivity(e) {
+  fieldPermittivity = parseFloat(e.target.value);
+
+  document.getElementById('epsilon').value = fieldPermittivity;
+
+  reloadModel();
+}
+function changeArea(e) {
+  area = parseFloat(e.target.value);
+
+  document.getElementById('S').value = area;
+
+  reloadModel();
 }
 
-function removeChargeForm(event) {
-  let n = event.currentTarget.id.slice("removeCharge".length, event.currentTarget.id.length) - 1;
-
-  fieldsPermittivities = fieldsPermittivities.filter(function(_, i) {
-    return i != n;
-  });
-  updateChargesForm();
-}
 
 window.onload = () => {
   let canvas = document.getElementById('mainchart');
@@ -438,12 +446,19 @@ window.onload = () => {
 
   document.getElementById('colorsq5value').addEventListener('change', updateColorGradient);
   document.getElementById('colorsq5exp').addEventListener('change', updateColorGradient);
+
+  document.getElementById('dRange').addEventListener('change', changeDistance);
+  document.getElementById('URange').addEventListener('change', changeVoltage);
+  document.getElementById('epsilonRange').addEventListener('change', changePermittivity);
+  document.getElementById('SRange').addEventListener('change', changeArea);
+  document.getElementById('UConnection').addEventListener('change', (e) => {
+    if (e.target.checked){
+      voltage = parseFloat(document.getElementById('U').value);
+      reloadModel();
+    }
+  });
   updateColorGradient(1);
 
-  document.getElementById('addEnvironment').addEventListener('click', addEnvironmentForm);
-
-  fieldsPermittivities = [1, 2];
-  updateChargesForm();
   reloadForm();
 
   document.getElementById('collisionForm').addEventListener('submit', function(event) {
